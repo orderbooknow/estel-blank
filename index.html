@@ -116,6 +116,24 @@
         .summary-card { background: #f9fbfe; border-radius: 16px; padding: 14px 18px; width: 100%; max-width: 320px; border: 1px solid #cbd5e1; }
         .summary-line { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px; }
         .summary-total { display: flex; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 2px dashed #b9c7da; font-weight: 700; font-size: 18px; }
+
+        .bonus-section { margin-top: 16px; }
+        .bonus-toggle-btn { width: 100%; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none; color: white; padding: 14px; border-radius: 16px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .bonus-toggle-btn:disabled { background: #cbd5e1; color: #64748b; cursor: not-allowed; }
+        .bonus-panel { margin-top: 12px; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 16px; padding: 14px; }
+        .bonus-panel.hidden { display: none; }
+        .bonus-info { background: white; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; border: 1px solid #fde68a; }
+        .bonus-info-line { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+        .bonus-info-line:last-child { margin-bottom: 0; }
+        .bonus-remaining { font-weight: 700; padding-top: 6px; border-top: 1px dashed #fde68a; }
+        .bonus-remaining span:last-child { color: #b45309; }
+        .bonus-hint { font-size: 11.5px; color: #92400e; margin-bottom: 10px; line-height: 1.4; }
+        .bonus-table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; }
+        .bonus-table th { background: #fef3c7; padding: 8px 6px; font-size: 11px; text-align: left; color: #92400e; }
+        .bonus-table td { padding: 8px 6px; font-size: 13px; border-top: 1px solid #fde68a; }
+        .bonus-qty-input { width: 60px; padding: 6px; border: 1.5px solid #fde68a; border-radius: 8px; font-size: 13px; text-align: center; }
+        .bonus-qty-input:disabled { background: #f1f5f9; color: #94a3b8; }
+        @media (max-width: 600px) { .bonus-qty-input { width: 50px; padding: 5px; font-size: 12px; } .bonus-table th, .bonus-table td { padding: 6px 4px; font-size: 11px; } }
         .order-form-section { margin-top: 20px; padding: 16px 14px; background: #f8fafc; border-radius: 16px; border: 1px solid #cbd5e1; }
         .order-form-section h3 { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
         .form-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
@@ -131,6 +149,11 @@
             .browser-banner, .control-bar, .btn, .action-buttons, .order-form-section, .footer-note, .nav-categories, .search-container, .loader, .dropdown-content {
                 display: none !important;
             }
+            .bonus-toggle-btn, .bonus-hint { display: none !important; }
+            .bonus-panel { display: block !important; border: none !important; background: none !important; padding: 0 !important; }
+            .bonus-row { display: none !important; }
+            .bonus-row[data-qty]:not([data-qty="0"]) { display: table-row !important; }
+            .bonus-table:not(:has(.bonus-row[data-qty]:not([data-qty="0"]))) { display: none !important; }
             .header {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
@@ -12303,6 +12326,31 @@
                 <div class="summary-total"><span>Итого</span><span id="totalPrice">0 ₽</span></div>
             </div>
         </div>
+        <div class="bonus-section">
+            <button class="bonus-toggle-btn" id="bonusToggleBtn" onclick="toggleBonusSection()">🎁 Выбрать ваш бонус (5%)</button>
+            <div class="bonus-panel hidden" id="bonusPanel">
+                <div class="bonus-info">
+                    <div class="bonus-info-line"><span>Доступный бонус (5% от заказа)</span><span id="bonusAvailable">0 ₽</span></div>
+                    <div class="bonus-info-line"><span>Выбрано бонусных товаров</span><span id="bonusUsed">0 ₽</span></div>
+                    <div class="bonus-info-line bonus-remaining"><span>Остаток бонуса</span><span id="bonusRemaining">0 ₽</span></div>
+                </div>
+                <div class="bonus-hint">🎁 Бонус — это 5% от суммы вашего основного заказа, округлённые вниз. Их можно потратить на товары ниже. Сумма выбранных бонусных товаров не может превышать доступный бонус — при попытке взять больше, количество будет автоматически ограничено.</div>
+                <table class="bonus-table">
+                    <thead><tr><th>Кол-во</th><th>Сумма</th><th>Наименование</th><th>Артикул</th><th>Цена</th></tr></thead>
+                    <tbody id="bonusContainer">
+                        <!-- СЮДА ВСТАВИТЬ БОНУСНЫЕ ТОВАРЫ (лист "Бонус" из Excel) -->
+                        <!-- Пример строки-шаблона: скопируйте её для каждого бонусного товара и замените данные -->
+                        <tr class="bonus-row" data-price="0" data-qty="0">
+                            <td><input type="number" min="0" max="9999" value="0" class="bonus-qty-input" oninput="updateBonusRowSum(this)" inputmode="numeric" disabled></td>
+                            <td class="bonus-sum-cell">0 ₽</td>
+                            <td class="bonus-name-cell">— добавьте бонусные товары —</td>
+                            <td class="bonus-article-cell">—</td>
+                            <td class="bonus-price-cell">0 ₽</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
         <div class="order-form-section">
             <h3>📋 Данные для заказа</h3>
             <div class="form-row">
@@ -12328,7 +12376,7 @@
 </div>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw-zi1IZyY7fXd_folvUJsvWZzJHIwwRBPMlS11i3Vdcma4XZtH9UazkYezx8l618Sp/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxElqlUl1zr4Fg_3-lgIHVwVwGyYQkPUF5RMG_Nj4oA_as6Ih0v95txtmamfA5nVD5-/exec";
     
     function isInWebView() {
         var ua = navigator.userAgent;
@@ -12403,6 +12451,7 @@
         document.getElementById('totalQty').textContent = totalQty;
         document.getElementById('totalPrice').textContent = totalSum.toLocaleString('ru-RU') + ' ₽';
         document.querySelectorAll('.category-section').forEach(function(s) { updateCategorySummary(s); });
+        updateBonusInfo();
     }
     
     function resetOrder() {
@@ -12416,8 +12465,119 @@
         document.getElementById('managerName').value = '';
         document.getElementById('contractorName').value = '';
         document.getElementById('phoneNumber').value = '';
+        resetBonus();
         calculateTotal();
         saveOrderToLocalStorage();
+    }
+    
+    // === БОНУСНАЯ СИСТЕМА (5% от суммы заказа) ===
+    const BONUS_RATE = 0.05;
+    
+    function toggleBonusSection() {
+        var panel = document.getElementById('bonusPanel');
+        panel.classList.toggle('hidden');
+        if (!panel.classList.contains('hidden')) updateBonusInfo();
+    }
+    
+    function getMainOrderTotal() {
+        var totalSum = 0;
+        document.querySelectorAll('#categoriesContainer tbody tr').forEach(function(row) {
+            var input = row.querySelector('.qty-input');
+            if (!input) return;
+            var qty = parseInt(input.value) || 0;
+            if (qty > 0) totalSum += getPriceFromRow(row) * qty;
+        });
+        return totalSum;
+    }
+    
+    function getBonusAvailable() {
+        return Math.floor(getMainOrderTotal() * BONUS_RATE);
+    }
+    
+    function getBonusUsed(excludeRow) {
+        var used = 0;
+        document.querySelectorAll('.bonus-row').forEach(function(row) {
+            if (row === excludeRow) return;
+            var input = row.querySelector('.bonus-qty-input');
+            var qty = parseInt(input.value) || 0;
+            var price = parseFloat(row.getAttribute('data-price')) || 0;
+            used += price * qty;
+        });
+        return used;
+    }
+    
+    function updateBonusInfo() {
+        var toggleBtn = document.getElementById('bonusToggleBtn');
+        if (!toggleBtn) return; // на случай, если блок ещё не вставлен
+        var available = getBonusAvailable();
+        var used = getBonusUsed(null);
+        var remaining = available - used;
+        document.getElementById('bonusAvailable').textContent = available.toLocaleString('ru-RU') + ' ₽';
+        document.getElementById('bonusUsed').textContent = used.toLocaleString('ru-RU') + ' ₽';
+        document.getElementById('bonusRemaining').textContent = remaining.toLocaleString('ru-RU') + ' ₽';
+        
+        var enabled = available > 0;
+        document.querySelectorAll('.bonus-qty-input').forEach(function(input) {
+            input.disabled = !enabled;
+        });
+        toggleBtn.disabled = !enabled;
+        toggleBtn.textContent = enabled ? '🎁 Выбрать ваш бонус (5%)' : '🎁 Бонус появится после заполнения заказа';
+    }
+    
+    function updateBonusRowSum(input) {
+        var row = input.closest('tr');
+        var price = parseFloat(row.getAttribute('data-price')) || 0;
+        var qty = parseInt(input.value) || 0;
+        if (qty < 0) qty = 0;
+        if (qty > 9999) qty = 9999;
+        
+        var available = getBonusAvailable();
+        var usedByOthers = getBonusUsed(row);
+        var remainingForThis = available - usedByOthers;
+        var maxQtyForThis = price > 0 ? Math.floor(remainingForThis / price) : 0;
+        if (maxQtyForThis < 0) maxQtyForThis = 0;
+        
+        if (qty > maxQtyForThis) {
+            qty = maxQtyForThis;
+            alert('⚠️ Недостаточно бонуса. Установлено максимально доступное количество: ' + qty);
+        }
+        input.value = qty;
+        var sum = price * qty;
+        row.querySelector('.bonus-sum-cell').textContent = sum.toLocaleString('ru-RU') + ' ₽';
+        row.setAttribute('data-qty', qty);
+        updateBonusInfo();
+        saveOrderToLocalStorage();
+    }
+    
+    function resetBonus() {
+        document.querySelectorAll('.bonus-qty-input').forEach(function(input) {
+            input.value = 0;
+            var row = input.closest('tr');
+            row.querySelector('.bonus-sum-cell').textContent = '0 ₽';
+            row.setAttribute('data-qty', 0);
+        });
+        updateBonusInfo();
+    }
+    
+    function getBonusItems() {
+        var items = [];
+        document.querySelectorAll('.bonus-row').forEach(function(row) {
+            var input = row.querySelector('.bonus-qty-input');
+            var qty = parseInt(input.value) || 0;
+            if (qty > 0) {
+                var price = parseFloat(row.getAttribute('data-price')) || 0;
+                items.push({
+                    cat: '🎁 БОНУС',
+                    name: row.querySelector('.bonus-name-cell').textContent,
+                    article: row.querySelector('.bonus-article-cell').textContent,
+                    barcode: '',
+                    price: price,
+                    qty: qty,
+                    sum: price * qty
+                });
+            }
+        });
+        return items;
     }
     
     function toggleCategory(header) {
@@ -12489,7 +12649,10 @@
             });
         });
         
-        if (items.length === 0) {
+        var bonusItems = getBonusItems();
+        var allItems = items.concat(bonusItems);
+        
+        if (allItems.length === 0) {
             alert('❌ Нет заказанных товаров для экспорта');
             return;
         }
@@ -12499,7 +12662,7 @@
         formData.append('manager', manager);
         formData.append('contractor', contractor);
         formData.append('phone', phone);
-        formData.append('items', JSON.stringify(items));
+        formData.append('items', JSON.stringify(allItems));
         
         try {
             const response = await fetch(SCRIPT_URL, {
@@ -12683,13 +12846,19 @@ function setupSearchObserver() {
     }, 200);
 }
     function saveOrderToLocalStorage() {
-        const orderData = { manager: document.getElementById('managerName').value, contractor: document.getElementById('contractorName').value, phone: document.getElementById('phoneNumber').value, quantities: {} };
+        const orderData = { manager: document.getElementById('managerName').value, contractor: document.getElementById('contractorName').value, phone: document.getElementById('phoneNumber').value, quantities: {}, bonusQuantities: {} };
         document.querySelectorAll('.category-section').forEach(section => {
             section.querySelectorAll('tbody tr').forEach(row => {
                 const article = row.querySelector('.article-cell').textContent;
                 const qty = row.querySelector('.qty-input').value;
                 if (qty !== '0' && qty !== '') orderData.quantities[article] = qty;
             });
+        });
+        document.querySelectorAll('.bonus-row').forEach((row, idx) => {
+            const article = row.querySelector('.bonus-article-cell') ? row.querySelector('.bonus-article-cell').textContent : String(idx);
+            const input = row.querySelector('.bonus-qty-input');
+            const qty = input ? input.value : '0';
+            if (qty !== '0' && qty !== '') orderData.bonusQuantities[article] = qty;
         });
         localStorage.setItem('estelOrder', JSON.stringify(orderData));
     }
@@ -12710,6 +12879,19 @@ function setupSearchObserver() {
                             const tr = row.closest('tr');
                             const input = tr.querySelector('.qty-input');
                             if (input) { input.value = qty; updateRowSum(input); }
+                            break;
+                        }
+                    }
+                }
+            }
+            if (orderData.bonusQuantities) {
+                for (const [article, qty] of Object.entries(orderData.bonusQuantities)) {
+                    const rows = document.querySelectorAll('.bonus-article-cell');
+                    for (let row of rows) {
+                        if (row.textContent === article) {
+                            const tr = row.closest('tr');
+                            const input = tr.querySelector('.bonus-qty-input');
+                            if (input) { input.value = qty; input.disabled = false; updateBonusRowSum(input); }
                             break;
                         }
                     }
@@ -12740,7 +12922,10 @@ function setupSearchObserver() {
         const base64 = btoa(String.fromCharCode.apply(null, new Uint8Array(excelBuffer)));
         
         const totalQty = items.reduce((s, i) => s + i.qty, 0);
-        const text = `<b>📦 ЗАКАЗ ESTEL</b>\n\n<b>👤 Менеджер:</b> ${manager}\n<b>🏢 Контрагент:</b> ${contractor}\n<b>📱 Телефон:</b> ${phone}\n<b>📦 Позиций:</b> ${items.length}\n<b>📦 Единиц:</b> ${totalQty}\n<b>💰 Итого:</b> ${total.toLocaleString('ru-RU')} ₽\n\n📎 Файл с заказом прикреплён ниже`;
+        const bonusInThisList = items.filter(i => i.cat === '🎁 БОНУС');
+        const bonusSum = bonusInThisList.reduce((s, i) => s + i.sum, 0);
+        const bonusLine = bonusInThisList.length ? `\n<b>🎁 Из них бонусных:</b> ${bonusInThisList.length} поз. на ${bonusSum.toLocaleString('ru-RU')} ₽` : '';
+        const text = `<b>📦 ЗАКАЗ ESTEL</b>\n\n<b>👤 Менеджер:</b> ${manager}\n<b>🏢 Контрагент:</b> ${contractor}\n<b>📱 Телефон:</b> ${phone}\n<b>📦 Позиций:</b> ${items.length}\n<b>📦 Единиц:</b> ${totalQty}\n<b>💰 Итого:</b> ${total.toLocaleString('ru-RU')} ₽${bonusLine}\n\n📎 Файл с заказом прикреплён ниже`;
         
         const formData = new URLSearchParams();
         formData.append('text', text);
@@ -12837,8 +13022,9 @@ function setupSearchObserver() {
                 }
             });
         });
-        if (items.length === 0) { alert('❌ Добавьте товары'); return; }
-        sendToTelegram(items, manager, contractor, phone);
+        var bonusItems = getBonusItems();
+        if (items.length === 0 && bonusItems.length === 0) { alert('❌ Добавьте товары'); return; }
+        sendToTelegram(items.concat(bonusItems), manager, contractor, phone);
     }
     
     function setupQuantityInputs() {
