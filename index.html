@@ -22,7 +22,7 @@
         .logo .professional::after { content: " ✦"; font-size: 9px; }
         .header-badge { background: rgba(255,255,255,0.12); backdrop-filter: blur(4px); padding: 6px 14px; border-radius: 30px; color: #f0e6d2; font-size: 11px; font-weight: 500; border: 1px solid rgba(255,255,255,0.2); }
         .content { padding: 12px 10px 20px; }
-        .search-container { display: flex; gap: 10px; margin-bottom: 16px; position: sticky; top: 0; z-index: 450; background: white; padding: 10px 0; transition: box-shadow 0.2s; }
+        .search-container { display: flex; gap: 10px; margin-bottom: 16px; background: white; padding: 10px 0; transition: box-shadow 0.2s; z-index: 450; }
         .search-container.is-stuck { box-shadow: 0 6px 14px -6px rgba(0,20,60,0.18); }
         .search-input { flex: 1; padding: 10px 14px; border: 1.5px solid #cbd5e1; border-radius: 30px; font-size: 14px; background: white; }
         .search-input:focus { outline: none; border-color: #0284c7; }
@@ -271,8 +271,8 @@
 </head>
 <body>
 <div class="quick-scroll" id="quickScroll">
-    <button class="qs-btn" id="qsPrev" title="Вверх страницы">▲</button>
-    <button class="qs-btn" id="qsNext" title="Вниз страницы">▼</button>
+    <button class="qs-btn" id="qsPrev" title="В самый верх">▲</button>
+    <button class="qs-btn" id="qsNext" title="В самый низ">▼</button>
 </div>
 <div class="qs-label" id="qsLabel"></div>
 <div class="order-container">
@@ -13109,17 +13109,65 @@ function setupSearchObserver() {
     function setupStickySearch() {
         var el = document.querySelector('.search-container');
         if (!el) return;
-        var rafPending = false;
-        function check() {
-            rafPending = false;
-            el.classList.toggle('is-stuck', el.getBoundingClientRect().top <= 0);
+        var placeholder = document.createElement('div');
+        placeholder.style.height = '0px';
+        el.parentNode.insertBefore(placeholder, el);
+
+        var naturalOffsetTop = null;
+        var stuck = false;
+
+        function measureNatural() {
+            naturalOffsetTop = el.getBoundingClientRect().top + window.scrollY;
         }
+
+        function applyStuck() {
+            var rect = el.getBoundingClientRect();
+            placeholder.style.height = rect.height + 'px';
+            el.style.position = 'fixed';
+            el.style.top = '0px';
+            el.style.left = rect.left + 'px';
+            el.style.width = rect.width + 'px';
+            el.classList.add('is-stuck');
+            stuck = true;
+        }
+
+        function removeStuck() {
+            el.style.position = '';
+            el.style.top = '';
+            el.style.left = '';
+            el.style.width = '';
+            el.classList.remove('is-stuck');
+            placeholder.style.height = '0px';
+            stuck = false;
+        }
+
+        function onScroll() {
+            if (naturalOffsetTop === null) measureNatural();
+            if (!stuck && window.scrollY >= naturalOffsetTop) {
+                applyStuck();
+            } else if (stuck && window.scrollY < naturalOffsetTop) {
+                removeStuck();
+            }
+        }
+
+        function onResize() {
+            var wasStuck = stuck;
+            if (wasStuck) removeStuck();
+            measureNatural();
+            if (wasStuck) applyStuck();
+            onScroll();
+        }
+
+        var rafPending = false;
         window.addEventListener('scroll', function() {
             if (rafPending) return;
             rafPending = true;
-            requestAnimationFrame(check);
+            requestAnimationFrame(function() { onScroll(); rafPending = false; });
         }, { passive: true });
-        check();
+        window.addEventListener('resize', onResize);
+
+        measureNatural();
+        onScroll();
     }
 
     function setupQuickScroll() {
@@ -13127,13 +13175,12 @@ function setupSearchObserver() {
         var nextBtn = document.getElementById('qsNext');
         if (!prevBtn || !nextBtn) return;
 
-        function scrollByPage(direction) {
-            var amount = window.innerHeight * 0.85 * direction;
-            window.scrollBy({ top: amount, behavior: 'smooth' });
+        function scrollableHeight() {
+            return Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
         }
 
-        prevBtn.addEventListener('click', function() { scrollByPage(-1); });
-        nextBtn.addEventListener('click', function() { scrollByPage(1); });
+        prevBtn.addEventListener('click', function() { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+        nextBtn.addEventListener('click', function() { window.scrollTo({ top: scrollableHeight(), behavior: 'smooth' }); });
     }
 
     function init() {
