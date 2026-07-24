@@ -22,7 +22,8 @@
         .logo .professional::after { content: " ✦"; font-size: 9px; }
         .header-badge { background: rgba(255,255,255,0.12); backdrop-filter: blur(4px); padding: 6px 14px; border-radius: 30px; color: #f0e6d2; font-size: 11px; font-weight: 500; border: 1px solid rgba(255,255,255,0.2); }
         .content { padding: 12px 10px 20px; }
-        .search-container { display: flex; gap: 10px; margin-bottom: 16px; }
+        .search-container { display: flex; gap: 10px; margin-bottom: 16px; position: sticky; top: 0; z-index: 450; background: white; padding: 10px 0; transition: box-shadow 0.2s; }
+        .search-container.is-stuck { box-shadow: 0 6px 14px -6px rgba(0,20,60,0.18); }
         .search-input { flex: 1; padding: 10px 14px; border: 1.5px solid #cbd5e1; border-radius: 30px; font-size: 14px; background: white; }
         .search-input:focus { outline: none; border-color: #0284c7; }
         .search-clear { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 8px 16px; border-radius: 30px; font-size: 13px; cursor: pointer; }
@@ -88,8 +89,6 @@
         }
         .qs-btn:hover { background: #e2e8f0; }
         .qs-btn:active { background: #0284c7; color: white; }
-        .qs-btn.qs-main { background: #0284c7; color: white; font-size: 12px; font-weight: 700; }
-        .qs-btn.qs-main:hover { background: #0369a1; }
         .qs-label {
             position: fixed;
             right: 56px;
@@ -272,10 +271,8 @@
 </head>
 <body>
 <div class="quick-scroll" id="quickScroll">
-    <button class="qs-btn qs-main" id="qsTop" title="В начало">⏫</button>
-    <button class="qs-btn" id="qsPrev" title="Предыдущая группа">▲</button>
-    <button class="qs-btn" id="qsNext" title="Следующая группа">▼</button>
-    <button class="qs-btn qs-main" id="qsBottom" title="В конец">⏬</button>
+    <button class="qs-btn" id="qsPrev" title="Вверх страницы">▲</button>
+    <button class="qs-btn" id="qsNext" title="Вниз страницы">▼</button>
 </div>
 <div class="qs-label" id="qsLabel"></div>
 <div class="order-container">
@@ -12441,7 +12438,7 @@
 </div>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzuA-ec3OnEWb-bqb02VJCQjxXjtYC_VSVzfmDScNvGIwo9e08egn-YzHbREODlO1Ai/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby2e6BWYMWmSRe3HMxNHU1-bAncf8luDk5r48aSn1rQ4WvMrL6eqX6G-YOBk6k7sz5S/exec";
     
     function isInWebView() {
         var ua = navigator.userAgent;
@@ -13109,68 +13106,34 @@ function setupSearchObserver() {
         document.addEventListener('focusout', function(e) { if (e.target && e.target.classList && e.target.classList.contains('qty-input')) { if (e.target.value === '') e.target.value = 0; updateRowSum(e.target); } });
     }
     
+    function setupStickySearch() {
+        var el = document.querySelector('.search-container');
+        if (!el) return;
+        var rafPending = false;
+        function check() {
+            rafPending = false;
+            el.classList.toggle('is-stuck', el.getBoundingClientRect().top <= 0);
+        }
+        window.addEventListener('scroll', function() {
+            if (rafPending) return;
+            rafPending = true;
+            requestAnimationFrame(check);
+        }, { passive: true });
+        check();
+    }
+
     function setupQuickScroll() {
-        var label = document.getElementById('qsLabel');
-        var top = document.getElementById('qsTop');
-        var bottom = document.getElementById('qsBottom');
         var prevBtn = document.getElementById('qsPrev');
         var nextBtn = document.getElementById('qsNext');
-        if (!top || !bottom || !prevBtn || !nextBtn) return;
+        if (!prevBtn || !nextBtn) return;
 
-        function scrollableHeight() {
-            return Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+        function scrollByPage(direction) {
+            var amount = window.innerHeight * 0.85 * direction;
+            window.scrollBy({ top: amount, behavior: 'smooth' });
         }
 
-        top.addEventListener('click', function() { window.scrollTo({ top: 0, behavior: 'smooth' }); });
-        bottom.addEventListener('click', function() { window.scrollTo({ top: scrollableHeight(), behavior: 'smooth' }); });
-
-        function getSections() { return Array.from(document.querySelectorAll('.category-section')); }
-
-        function goToSection(section) {
-            if (!section) return;
-            var content = section.querySelector('.category-content');
-            if (content && content.classList.contains('hidden')) {
-                content.classList.remove('hidden');
-                var icon = section.querySelector('.category-icon');
-                if (icon) icon.textContent = '▼';
-            }
-            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            var title = section.querySelector('.category-title');
-            if (title && label) {
-                label.textContent = title.textContent.trim();
-                var rect = section.getBoundingClientRect();
-                label.style.top = (window.scrollY + rect.top < 0 ? 20 : Math.min(Math.max(rect.top, 20), window.innerHeight - 40)) + 'px';
-                label.classList.add('show');
-                clearTimeout(label._t);
-                label._t = setTimeout(function() { label.classList.remove('show'); }, 1400);
-            }
-            section.style.backgroundColor = '#fef3c7';
-            setTimeout(function() { section.style.backgroundColor = ''; }, 1000);
-        }
-
-        function currentSectionIndex(sections) {
-            var refY = 90; // учитываем шапку/поиск
-            var idx = -1;
-            for (var i = 0; i < sections.length; i++) {
-                var rect = sections[i].getBoundingClientRect();
-                if (rect.top <= refY) idx = i; else break;
-            }
-            return idx;
-        }
-
-        prevBtn.addEventListener('click', function() {
-            var sections = getSections();
-            var idx = currentSectionIndex(sections);
-            var targetIdx = idx <= 0 ? 0 : idx - 1;
-            goToSection(sections[targetIdx]);
-        });
-        nextBtn.addEventListener('click', function() {
-            var sections = getSections();
-            var idx = currentSectionIndex(sections);
-            var targetIdx = idx + 1 >= sections.length ? sections.length - 1 : idx + 1;
-            if (targetIdx < 0) targetIdx = 0;
-            goToSection(sections[targetIdx]);
-        });
+        prevBtn.addEventListener('click', function() { scrollByPage(-1); });
+        nextBtn.addEventListener('click', function() { scrollByPage(1); });
     }
 
     function init() {
@@ -13202,6 +13165,7 @@ function setupSearchObserver() {
     }
     setupSearchObserver(); // ← ЭТА СТРОКА ДОБАВЛЕНА
     setupQuickScroll();
+    setupStickySearch();
 }
     
     init();
