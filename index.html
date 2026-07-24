@@ -90,29 +90,6 @@
         .qs-btn:active { background: #0284c7; color: white; }
         .qs-btn.qs-main { background: #0284c7; color: white; font-size: 12px; font-weight: 700; }
         .qs-btn.qs-main:hover { background: #0369a1; }
-        .qs-track {
-            width: 8px;
-            flex: 1;
-            min-height: 90px;
-            background: #e2e8f0;
-            border-radius: 4px;
-            position: relative;
-            margin: 2px 0;
-            cursor: pointer;
-        }
-        .qs-thumb {
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 18px;
-            height: 34px;
-            background: #0284c7;
-            border-radius: 9px;
-            cursor: grab;
-            touch-action: none;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-        }
-        .qs-thumb:active { cursor: grabbing; background: #0369a1; }
         .qs-label {
             position: fixed;
             right: 56px;
@@ -134,8 +111,6 @@
         @media (max-width: 600px) {
             .quick-scroll { right: 4px; padding: 6px 4px; gap: 3px; }
             .qs-btn { width: 26px; height: 26px; font-size: 11px; }
-            .qs-track { width: 6px; min-height: 70px; }
-            .qs-thumb { width: 15px; height: 28px; }
         }
         @media print { .quick-scroll, .qs-label { display: none !important; } }
         
@@ -299,7 +274,6 @@
 <div class="quick-scroll" id="quickScroll">
     <button class="qs-btn qs-main" id="qsTop" title="В начало">⏫</button>
     <button class="qs-btn" id="qsPrev" title="Предыдущая группа">▲</button>
-    <div class="qs-track" id="qsTrack"><div class="qs-thumb" id="qsThumb"></div></div>
     <button class="qs-btn" id="qsNext" title="Следующая группа">▼</button>
     <button class="qs-btn qs-main" id="qsBottom" title="В конец">⏬</button>
 </div>
@@ -12448,12 +12422,11 @@
                 <div class="form-group"><label for="managerName">👤 Менеджер</label><input type="text" id="managerName" placeholder="Иванова Анна"></div>
                 <div class="form-group"><label for="contractorName">🏢 Контрагент</label><input type="text" id="contractorName" placeholder="ООО «Салон Красоты»"></div>
                 <div class="form-group"><label for="phoneNumber">📱 Телефон</label><input type="tel" id="phoneNumber" placeholder="+7 (___) ___-__-__"></div>
-                <div class="form-group"><label for="emailAddress">📧 Email клиента (необязательно, для копии-подтверждения)</label><input type="email" id="emailAddress" placeholder="salon@example.com"></div>
+                <div class="form-group"><label for="emailAddress">📧 Ваш Email, необязательно, придет подтверждение заказа</label><input type="email" id="emailAddress" placeholder="salon@example.com"></div>
             </div>
         </div>
         <div class="action-buttons">
             <button class="btn" onclick="resetOrder()"><span>🔄</span> Очистить</button>
-            <button class="btn" onclick="downloadFullPriceList()">📥 Скачать бланк заказов</button>
             <div class="dropdown">
                 <button class="btn btn-primary" onclick="toggleDropdown()">💾 Сохранить ▼</button>
                 <div id="saveDropdown" class="dropdown-content">
@@ -12468,7 +12441,7 @@
 </div>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzuA-ec3OnEWb-bqb02VJCQjxXjtYC_VSVzfmDScNvGIwo9e08egn-YzHbREODlO1Ai/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby2e6BWYMWmSRe3HMxNHU1-bAncf8luDk5r48aSn1rQ4WvMrL6eqX6G-YOBk6k7sz5S/exec";
     
     function isInWebView() {
         var ua = navigator.userAgent;
@@ -13137,63 +13110,16 @@ function setupSearchObserver() {
     }
     
     function setupQuickScroll() {
-        var track = document.getElementById('qsTrack');
-        var thumb = document.getElementById('qsThumb');
         var label = document.getElementById('qsLabel');
         var top = document.getElementById('qsTop');
         var bottom = document.getElementById('qsBottom');
         var prevBtn = document.getElementById('qsPrev');
         var nextBtn = document.getElementById('qsNext');
-        if (!track || !thumb) return;
+        if (!top || !bottom || !prevBtn || !nextBtn) return;
 
         function scrollableHeight() {
             return Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
         }
-        function trackUsableHeight() {
-            return Math.max(track.clientHeight - thumb.offsetHeight, 1);
-        }
-        function updateThumbFromScroll() {
-            var fraction = window.scrollY / scrollableHeight();
-            fraction = Math.min(Math.max(fraction, 0), 1);
-            thumb.style.top = (fraction * trackUsableHeight()) + 'px';
-        }
-        var rafPending = false;
-        window.addEventListener('scroll', function() {
-            if (rafPending) return;
-            rafPending = true;
-            requestAnimationFrame(function() { updateThumbFromScroll(); rafPending = false; });
-        }, { passive: true });
-        window.addEventListener('resize', updateThumbFromScroll);
-
-        function scrollToFraction(fraction) {
-            fraction = Math.min(Math.max(fraction, 0), 1);
-            window.scrollTo({ top: fraction * scrollableHeight(), behavior: 'auto' });
-        }
-
-        function fractionFromClientY(clientY) {
-            var rect = track.getBoundingClientRect();
-            var y = clientY - rect.top - (thumb.offsetHeight / 2);
-            return y / trackUsableHeight();
-        }
-
-        var dragging = false;
-        thumb.addEventListener('pointerdown', function(e) {
-            dragging = true;
-            thumb.setPointerCapture(e.pointerId);
-            e.preventDefault();
-        });
-        thumb.addEventListener('pointermove', function(e) {
-            if (!dragging) return;
-            scrollToFraction(fractionFromClientY(e.clientY));
-        });
-        thumb.addEventListener('pointerup', function(e) {
-            dragging = false;
-            try { thumb.releasePointerCapture(e.pointerId); } catch(err) {}
-        });
-        track.addEventListener('click', function(e) {
-            if (e.target === thumb) return;
-            scrollToFraction(fractionFromClientY(e.clientY));
-        });
 
         top.addEventListener('click', function() { window.scrollTo({ top: 0, behavior: 'smooth' }); });
         bottom.addEventListener('click', function() { window.scrollTo({ top: scrollableHeight(), behavior: 'smooth' }); });
@@ -13245,8 +13171,6 @@ function setupSearchObserver() {
             if (targetIdx < 0) targetIdx = 0;
             goToSection(sections[targetIdx]);
         });
-
-        updateThumbFromScroll();
     }
 
     function init() {
